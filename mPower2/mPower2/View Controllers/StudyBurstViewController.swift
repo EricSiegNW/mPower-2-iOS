@@ -133,6 +133,17 @@ class StudyBurstViewController: UIViewController {
         return storyboard.instantiateViewController(withIdentifier: "StudyBurstViewController") as? StudyBurstViewController
     }
     
+
+    
+    func getNextIncompleteTask() -> ScheduledTask? {
+        let tasks = studyBurstManager?.orderedTasks ?? []
+        if let nextIndex = tasks.firstIndex(where: { $0.finishedOn == nil && !taskBrowserVC!.wasTaskSkipped(task: $0.taskInfo)}) {
+            return tasks[nextIndex]
+        } else {
+            return nil
+        }
+    }
+    
     // MARK: Actions
     @objc func backHit(sender: Any) {
         self.navigationController?.popToRootViewController(animated: true)
@@ -140,22 +151,23 @@ class StudyBurstViewController: UIViewController {
     
     @objc func nextHit(sender: Any) {
         // If user is completed for today, then show the Completion VC, otherwise, show the next task
-        if studyBurstManager?.isCompletedForToday ?? false {
+        if let taskToComplete = getNextIncompleteTask() {
+            // We have the next incomplete task, so go ahead and start it
+            taskBrowserVC?.startTask(for: taskToComplete.taskInfo)
+        } else {
+            // There aren't any remaining incomplete tasks, so go ahead and finish
             self.navigationController?.popToRootViewController(animated: true)
-        }
-        else {
-            taskBrowserVC?.startNextTask()
         }
     }
     
     @objc func skipHit(sender: Any) {
-        // Skip the current activity, then if they are done show the Completion VC, otherwise show the next task
-        
-        if studyBurstManager?.isCompletedForToday ?? false {
+        //
+        if let taskToComplete = getNextIncompleteTask() {
+            // We have the next incomplete task, so skip it
+            taskBrowserVC?.skipTask(for: taskToComplete.taskInfo)
+        } else {
+            // There aren't any remaining incomplete tasks, so finish instead
             self.navigationController?.popToRootViewController(animated: true)
-        }
-        else {
-            taskBrowserVC?.skipCurrentTask()
         }
     }
 }
@@ -199,28 +211,17 @@ extension StudyBurstViewController: TaskBrowserViewControllerDelegate {
 
 class StudyBurstTaskBrowserViewController: TaskBrowserViewController {
     
-    func nextTaskIndex() -> Int {
-        return tasks.firstIndex(where: { $0.finishedOn == nil && !self.wasTaskSkipped(task: $0.taskInfo)}) ?? 0
-        // Note: this returning 0 might be contributing to Step-24 Bug Fix 3
-    }
-    
-    // MARK: Instance methods
-    public func startNextTask() {
-        // Get the next incomplete task and present it.
-        let idx = nextTaskIndex()
-        guard tasks.count > idx else { return }
-        startTask(for: tasks[idx].taskInfo)
-    }
-    
-    public func skipCurrentTask() {
-        // Get the next incomplete task and skip it.
-        let idx = nextTaskIndex()
-        guard tasks.count > idx else { return }
-        skipTask(for: tasks[idx].taskInfo)
-    }
-    
     func wasTaskSkipped(task: RSDTaskInfo) -> Bool {
         StudyBurstScheduleManager.shared.skippedTasks.contains(where: { $0.identifier == task.identifier })
+    }
+    
+    func nextTaskIndex() -> Int {
+        if let nextIndex = tasks.firstIndex(where: { $0.finishedOn == nil && !self.wasTaskSkipped(task: $0.taskInfo)}) {
+            return nextIndex
+        } else {
+            // There is no incomplete task, so return -1 (an invalid index)
+            return -1
+        }
     }
     
     // MARK: Overrides
@@ -294,7 +295,7 @@ class StudyBurstTaskBrowserViewController: TaskBrowserViewController {
     }
     
     override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        // Only launch the task if this is the first availble (ie. not completed) task
+        // Only launch the task if this is the first available (ie. not completed) task
         guard indexPath.row == self.nextTaskIndex() else { return }
         super.collectionView(collectionView, didSelectItemAt: indexPath)
     }
