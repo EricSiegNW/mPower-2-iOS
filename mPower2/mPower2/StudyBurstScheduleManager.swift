@@ -856,6 +856,39 @@ class StudyBurstScheduleManager : TaskGroupScheduleManager {
         return (requests, pendingRequestIds)
     }
     
+    func getDaysUntilNextStudyBurst() -> Int? {
+        // Get future schedules.
+        let date = self.today()
+        let start = date.startOfDay()
+        let end = start.addingNumberOfYears(1)
+        
+        let taskPredicate = SBBScheduledActivity.activityIdentifierPredicate(with: self.studyBurst.identifier)
+        let notFinishedPredicate = NSCompoundPredicate(notPredicateWithSubpredicate: SBBScheduledActivity.isFinishedPredicate())
+        let studyMarkerPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+                                                        SBBScheduledActivity.availablePredicate(from: self.today(), to: end),
+            notFinishedPredicate,
+            taskPredicate])
+        do {
+            let nextSchedules = try self.activityManager.getCachedSchedules(using: studyMarkerPredicate,
+                                                                        sortDescriptors: [SBBScheduledActivity.scheduledOnSortDescriptor(ascending: true)],
+                                                                        fetchLimit: UInt(1))
+            if nextSchedules.count > 0 {
+                // a schedule was found, so let's get the date
+                let schedule : SBBScheduledActivity = nextSchedules[0]
+                let dateOfNextBurst = schedule.scheduledOn
+                // Now, get the days until that date
+                let diffInDays = Calendar.current.dateComponents([.day], from: start, to: dateOfNextBurst).day
+                return diffInDays
+            } else {
+                // No schedule found, so return nil
+                return nil
+            }
+        } catch let err {
+            assertionFailure("Failed to get cached schedules looking for days until next study burst. \(err)")
+            return nil
+        }
+    }
+    
     func willPresentNotification(_ notification: UNNotification) {
         let nextDate = notification.date.addingNumberOfDays(90)
         guard nextDate < SBAParticipantManager.shared.startStudy.addingNumberOfYears(2)

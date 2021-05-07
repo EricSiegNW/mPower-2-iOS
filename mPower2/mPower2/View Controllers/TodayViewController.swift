@@ -59,9 +59,11 @@ class TodayViewController: UIViewController {
     @IBOutlet weak var taskBrowserContainerView: UIView!
     @IBOutlet weak var taskBrowserTopConstraint: NSLayoutConstraint!
     @IBOutlet weak var headerViewBottomConstraint: NSLayoutConstraint!
+    @IBOutlet weak var actionBarArrow: UIImageView!
     
     var taskBrowserVC: TaskBrowserViewController?
     var tableSetupDone = false
+    var inStudyBurstPeriod = true
     var dragDistance: CGFloat = 0.0
     var taskBrowserVisible = true {
         didSet {
@@ -246,33 +248,40 @@ class TodayViewController: UIViewController {
         // If we should not show it, then make it's height 0, otherwise remove
         // the height constraint
         let previousConstraint = actionBarView.rsd_constraint(for: .height, relation: .equal)
-        if shouldShowActionBar {
-            if let heightConstraint = previousConstraint {
-                NSLayoutConstraint.deactivate([heightConstraint])
-            }
-            
-            if let schedule = surveyManager.scheduledActivities.first {
-                actionBarTitleLabel.text = schedule.activity.title
-                actionBarDetailsLabel.text = schedule.activity.detail
-            }
-            else if !studyBurstManager.isCompletedForToday {
-                actionBarTitleLabel.text = Localization.localizedString("STUDY_BURST_ACTION_BAR_TITLE")
-                if let expiresOn = studyBurstManager.expiresOn, !studyBurstManager.hasExpired {
-                    actionBarDetailsLabel.updateStudyBurstExpirationTime(expiresOn)
-                }
-                else {
-                    let remainingCount = studyBurstManager.totalActivitiesCount - studyBurstManager.finishedCount
-                    let formatString : String = NSLocalizedString("ACTIVITIES_TO_DO",
-                                                                  comment: "Detail for the number of activities remaining.")
-                    actionBarDetailsLabel.text = String.localizedStringWithFormat(formatString, remainingCount)
-                }
-            }
-            else if let actionBarItem = studyBurstManager.actionBarItem {
-                actionBarTitleLabel.text = actionBarItem.title
-                actionBarDetailsLabel.text = actionBarItem.detail
-            }
+        self.actionBarArrow.isHidden = false
+        self.inStudyBurstPeriod = true
+        if let heightConstraint = previousConstraint {
+            NSLayoutConstraint.deactivate([heightConstraint])
         }
-        else if (previousConstraint == nil) {
+        
+        if let schedule = surveyManager.scheduledActivities.first {
+            actionBarTitleLabel.text = schedule.activity.title
+            actionBarDetailsLabel.text = schedule.activity.detail
+        } else if !studyBurstManager.isCompletedForToday {
+            actionBarTitleLabel.text = Localization.localizedString("STUDY_BURST_ACTION_BAR_TITLE")
+            if let expiresOn = studyBurstManager.expiresOn, !studyBurstManager.hasExpired {
+                actionBarDetailsLabel.updateStudyBurstExpirationTime(expiresOn)
+            }
+            else {
+                let remainingCount = studyBurstManager.totalActivitiesCount - studyBurstManager.finishedCount
+                let formatString : String = NSLocalizedString("ACTIVITIES_TO_DO",
+                                                              comment: "Detail for the number of activities remaining.")
+                actionBarDetailsLabel.text = String.localizedStringWithFormat(formatString, remainingCount)
+            }
+        } else if let actionBarItem = studyBurstManager.actionBarItem {
+            actionBarTitleLabel.text = actionBarItem.title
+            actionBarDetailsLabel.text = actionBarItem.detail
+        } else if let daysUntilNextBurst = studyBurstManager.getDaysUntilNextStudyBurst() {
+            self.actionBarArrow.isHidden = true
+            self.inStudyBurstPeriod = false
+            actionBarTitleLabel.text = Localization.localizedString("STUDY_BURST_ACTION_BAR_TITLE")
+            if (daysUntilNextBurst == 1) {
+                actionBarDetailsLabel.text = Localization.localizedString("1_DAY_UNTIL_NEXT_BURST")
+            } else if (daysUntilNextBurst >= 0) {
+                actionBarDetailsLabel.text = String.localizedStringWithFormat(Localization.localizedString("%@_DAYS_UNTIL_NEXT_BURST"), daysUntilNextBurst)
+            }
+        } else if (previousConstraint == nil) {
+            // Nothing valid, so hide it
             actionBarView.rsd_makeHeight(.equal, 0.0)
         }
     }
@@ -387,7 +396,7 @@ class TodayViewController: UIViewController {
             vc.delegate = self
             self.navigationController?.pushViewController(vc, animated: animated)
         }
-        else {
+        else if self.inStudyBurstPeriod {
             let vc = StudyBurstViewController.instantiate()!
             vc.studyBurstManager = studyBurstManager
             vc.delegate = self

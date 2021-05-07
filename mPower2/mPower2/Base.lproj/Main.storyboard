@@ -707,6 +707,7 @@
                                 </userDefinedRuntimeAttributes>
                             </view>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="vIu-1K-4tb"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="YZE-Ab-Odb" firstAttribute="trailing" secondItem="GO5-fK-Jmq" secondAttribute="trailing" id="3GW-y7-mlq"/>
@@ -727,11 +728,11 @@
                             <constraint firstItem="vIu-1K-4tb" firstAttribute="trailing" secondItem="CJS-by-dpw" secondAttribute="trailing" constant="20" id="rkK-mu-iQy"/>
                             <constraint firstItem="CJS-by-dpw" firstAttribute="bottom" secondItem="95F-HW-j3O" secondAttribute="bottom" priority="999" constant="-5" id="zwe-L7-QUk"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="vIu-1K-4tb"/>
                     </view>
                     <tabBarItem key="tabBarItem" title="Tracking" image="TabTracking_unselected" id="72E-iF-e3N"/>
                     <navigationItem key="navigationItem" id="eOL-zV-IL5"/>
                     <connections>
+                        <outlet property="actionBarArrow" destination="J8A-ze-t6h" id="RKj-lB-Xet"/>
                         <outlet property="actionBarDetailsLabel" destination="31u-h4-Koc" id="7q9-nI-KHq"/>
                         <outlet property="actionBarTitleLabel" destination="16e-GU-lCY" id="qMO-Td-cJm"/>
                         <outlet property="actionBarView" destination="CJS-by-dpw" id="m6R-gy-OVk"/>
